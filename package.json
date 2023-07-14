@@ -2,7 +2,7 @@
   "name": "poc-push-api",
   "version": "1.0.0",
   "description": "Hello there! 🎉",
-  "main": "index.html",
+  "main": "public/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js"
