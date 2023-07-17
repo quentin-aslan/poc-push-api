@@ -32,7 +32,6 @@ webpush.setVapidDetails(
     vapidKeys.privateKey   // Your private VAPID key
 );
 
-
 // Handle subscription
 
 let savedSubscription;
@@ -64,7 +63,7 @@ app.post('/sendNotification', (req, res) => {
         notification: {
             title: 'New Notification',
             body: 'This is the body of the notification',
-            //icon: 'assets/icons/icon-512x512.png',
+            icon: 'icon.png',
         },
     };
 

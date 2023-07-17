@@ -48,7 +48,6 @@ const  subscribeUserToPush = async () => {
             applicationServerKey: urlBase64ToUint8Array(public_key)
         }
 
-        console.log(subscribeOptions)
         const pushSubscription = await serviceWorker.pushManager.subscribe(subscribeOptions)
 
         console.log('Received PushSubscription: ', JSON.stringify(pushSubscription));

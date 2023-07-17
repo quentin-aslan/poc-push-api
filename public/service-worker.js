@@ -3,6 +3,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('push', event => {
+    console.log('Service worker - New Event Push !!!')
     const data = event.data.json();
 
     const options = {
