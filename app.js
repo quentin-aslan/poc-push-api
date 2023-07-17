@@ -1,25 +1,37 @@
 // Set-up express server
 const fs = require('fs')
 const https = require('https')
+const http = require('http')
 const express = require('express');
 const webpush = require('web-push');
 const app = express();
-
-const httpsKeys = {
-    cert: fs.readFileSync('/etc/letsencrypt/live/quentinaslan.fr/fullchain.pem'),
-    key: fs.readFileSync('/etc/letsencrypt/live/quentinaslan.fr/privkey.pem')
-}
+const SERVER_PORT = process.env.PORT || 3000;
 
 app.use(require('body-parser').json());
 app.use(express.static('public'));
 
-const server = https.createServer(httpsKeys, app)
+const getCertificate = () => {
+    const fullchainPath = './certs/fullchain.pem'
+    const privkeyPath = './certs/privkey.pem'
+    if (!fs.existsSync(fullchainPath) || !fs.existsSync(privkeyPath)) return false
 
-server.listen(3000, () => {
-    console.log('Server started on port 3000');
-    // display public adress of the server (not localhost
+    return {
+        cert: fs.readFileSync('./certs/fullchain.pem'),
+        key: fs.readFileSync('./certs/privkey.pem')
+    }
+}
 
-});
+const getServer = () => {
+    if (!getCertificate()) {
+        console.log('No certificates found, starting http server instead of https')
+        return http.createServer(app)
+    } else {
+        console.log('Certificates found, starting https server')
+        return https.createServer(getCertificate(), app)
+    }
+}
+
+getServer().listen(SERVER_PORT, () => console.log(`Server started on port ${SERVER_PORT}`))
 
 // Generate VAPID Keys
 // const vapidKeys = webpush.generateVAPIDKeys();
@@ -68,12 +80,10 @@ app.post('/sendNotification', (req, res) => {
         },
     };
 
-    const pushSubscription = savedSubscription;
-
     webpush.sendNotification(
-        pushSubscription,
+        savedSubscription,
         JSON.stringify(notificationPayload)
     );
 
-    res.status(200).json({});
+    res.sendStatus(200)
 });
