@@ -1,12 +1,21 @@
 // Set-up express server
-
+const fs = require('fs')
+const https = require('https')
 const express = require('express');
 const webpush = require('web-push');
 const app = express();
 
-app.use(require('body-parser').json());
+const httpsKeys = {
+    cert: fs.readFileSync('/etc/letsencrypt/live/quentinaslan.fr/fullchain.pem'),
+    key: fs.readFileSync('/etc/letsencrypt/live/quentinaslan.fr/privkey.pem')
+}
 
-app.listen(3000, () => {
+app.use(require('body-parser').json());
+app.use(express.static('public'));
+
+const server = https.createServer(httpsKeys, app)
+
+server.listen(3000, () => {
     console.log('Server started on port 3000');
     // display public adress of the server (not localhost
 
@@ -22,7 +31,6 @@ const vapidKeys = {
 }
 
 console.log('Vapid Keys')
-console.log(vapidKeys);
 
 
 // Set VAPID Details
@@ -37,13 +45,6 @@ webpush.setVapidDetails(
 let savedSubscription;
 
 // Create a api route who send index.html
-
-// declare a folder who contains static files
-app.use(express.static('public'));
-
-app.get('/', (req, res) => {
-    res.sendFile('/index.html');
-});
 
 app.get('/vapid_public', (req, res) => {
     res.status(200).json({vapid_public_key: vapidKeys.publicKey})
