@@ -5,7 +5,7 @@ const http = require('http')
 const express = require('express');
 const webpush = require('web-push');
 const app = express();
-const SERVER_PORT = process.env.PORT || 3000;
+const SERVER_PORT = process.env.PORT || 4000;
 
 app.use(require('body-parser').json());
 app.use(express.static('public'));
@@ -57,6 +57,10 @@ webpush.setVapidDetails(
 let savedSubscription;
 
 // Create a api route who send index.html
+
+app.get('/', (req, res) => {
+    res.status(200).sendFile('index.html');
+})
 
 app.get('/vapid_public', (req, res) => {
     res.status(200).json({vapid_public_key: vapidKeys.publicKey})
