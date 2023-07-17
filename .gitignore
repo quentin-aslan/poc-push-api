@@ -1,2 +1,5 @@
 .idea
 node_modules
+certs/fullchain.pem
+certs/privkey.pem
+package-lock.json
