@@ -1,0 +1,16 @@
+{
+  "name": "poc-api-push Aslan",
+  "short_name": "AslanApiPush",
+  "description": "Une description de mon application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ]
+}

@@ -1,1 +1,1 @@
-POST http://localhost:3000/sendNotification
+POST https://quentinaslan.fr:4000/sendNotification
