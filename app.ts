@@ -1,15 +1,16 @@
 // Set-up express server
-const fs = require('fs')
-const https = require('https')
-const http = require('http')
-const webPush = require('web-push');
+import fs from 'fs'
+import https from 'https'
+import http from 'http'
+import webPush from 'web-push'
+import bodyParser from 'body-parser'
+import { Database, VapidKeys, Subscription, Notification } from "./types";
 import { Low } from 'lowdb'
 import { JSONFile } from 'lowdb/node'
-
-const express = require('express');
+import express, { Request, Response } from "express";
 const app = express();
 const SERVER_PORT = process.env.PORT || 4000;
-let CURRENT_DB = undefined
+let CURRENT_DB: Low<Database> | undefined = undefined
 
 // Functions
 const getDb = () => {
@@ -17,26 +18,33 @@ const getDb = () => {
     const file = './db.json'
     if (!fs.existsSync(file)) fs.writeFileSync(file, '')
     const defaultData = { subscriptions: [], vapidKeys: { public: undefined, privateKey: undefined } }
-    const adapter = new JSONFile(file)
-    const db = new Low(adapter, defaultData)
+    const adapter = new JSONFile<Database>(file)
+    const db = new Low<Database>(adapter, defaultData)
     CURRENT_DB = db
     return db
 }
-const getVapidKeys = async () => {
-    const db = getDb()
-    if (db.data.vapidKeys.publicKey && db.data.vapidKeys.privateKey) return db.data.vapidKeys
-    db.data.vapidKeys = webPush.generateVAPIDKeys()
-    await db.write()
+const getVapidKeys = async (): Promise<VapidKeys> => {
+    try {
+        const db = getDb()
+        if (db.data.vapidKeys.publicKey && db.data.vapidKeys.privateKey) return db.data.vapidKeys
+        db.data.vapidKeys = webPush.generateVAPIDKeys()
+        await db.write()
+        return db.data.vapidKeys
+    } catch (e) {
+        console.error(e)
+        return { publicKey: undefined, privateKey: undefined }
+    }
 }
 const initwebPush = async () => {
     const vapidKeys = await getVapidKeys()
+    if (!vapidKeys.publicKey || !vapidKeys.privateKey) throw new Error('No vapid keys found')
     webPush.setVapidDetails(
         'mailto:quentin.aslan@outlook.com',
         vapidKeys.publicKey,
         vapidKeys.privateKey
     )
 }
-const saveSubscriptionInDb = async (subscription) => {
+const saveSubscriptionInDb = async (subscription: Subscription) => {
     const db = getDb()
     const user = db.data.subscriptions.find(user => user.endpoint === subscription.endpoint)
     if (!user) {
@@ -55,17 +63,18 @@ const getCertificate = () => {
     }
 }
 const getServer = () => {
-    if (!getCertificate()) {
+    const certs = getCertificate()
+    if (!certs) {
         console.log('No certificates found, starting http server instead of https')
         return http.createServer(app)
     } else {
         console.log('Certificates found, starting https server')
-        return https.createServer(getCertificate(), app)
+        return https.createServer(certs, app)
     }
 }
 
 // Start server
-app.use(require('body-parser').json());
+app.use(bodyParser.json());
 app.use(express.static('public'));
 getServer().listen(SERVER_PORT, () => console.log(`Server started on port ${SERVER_PORT}`))
 
@@ -74,15 +83,18 @@ initwebPush()
 
 // API ROUTES
 
-app.get('/', (req, res) => {
+
+app.get('/', (req: Request, res: Response) => {
     res.status(200).sendFile('index.html');
 })
 
-app.get('/vapid_public', (req, res) => {
+app.get('/vapid_public', (req: Request, res: Response) => {
+    const vapidKeys = getDb().data.vapidKeys
+    if (!vapidKeys.publicKey) return res.status(500).json({ message: 'No public key found' })
     res.status(200).json({vapid_public_key: vapidKeys.publicKey})
 })
 
-app.post('/subscribe', async (req, res) => {
+app.post('/subscribe', async (req: any, res: any) => {
     try {
         const subscription = req.body;
         // Check if subscription have all keys
@@ -99,9 +111,9 @@ app.post('/subscribe', async (req, res) => {
 
 
 // Send a push notification
-app.post('/sendNotification', (req, res) => {
+app.post('/sendNotification', (req: Request, res: Response) => {
     try {
-        const notificationPayload = {
+        const notificationPayload: { notification: Notification } = {
             notification: {
                 title: 'New Notification',
                 body: 'This is the body of the notification',
