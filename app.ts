@@ -13,19 +13,23 @@ const SERVER_PORT = process.env.PORT || 4000;
 let CURRENT_DB: Low<Database> | undefined = undefined
 
 // Functions
-const getDb = () => {
+const getDb = async () => {
     if (CURRENT_DB) return CURRENT_DB
     const file = './db.json'
     if (!fs.existsSync(file)) fs.writeFileSync(file, '')
+
     const defaultData = { subscriptions: [], vapidKeys: { public: undefined, privateKey: undefined } }
     const adapter = new JSONFile<Database>(file)
+
     const db = new Low<Database>(adapter, defaultData)
+    await db.read()
     CURRENT_DB = db
     return db
 }
 const getVapidKeys = async (): Promise<VapidKeys> => {
     try {
-        const db = getDb()
+        const db = await getDb()
+
         if (db.data.vapidKeys.publicKey && db.data.vapidKeys.privateKey) return db.data.vapidKeys
         db.data.vapidKeys = webPush.generateVAPIDKeys()
         await db.write()
@@ -35,7 +39,7 @@ const getVapidKeys = async (): Promise<VapidKeys> => {
         return { publicKey: undefined, privateKey: undefined }
     }
 }
-const initwebPush = async () => {
+const initWebPush = async () => {
     const vapidKeys = await getVapidKeys()
     if (!vapidKeys.publicKey || !vapidKeys.privateKey) throw new Error('No vapid keys found')
     webPush.setVapidDetails(
@@ -45,7 +49,7 @@ const initwebPush = async () => {
     )
 }
 const saveSubscriptionInDb = async (subscription: Subscription) => {
-    const db = getDb()
+    const db = await getDb()
     const user = db.data.subscriptions.find(user => user.endpoint === subscription.endpoint)
     if (!user) {
         db.data.subscriptions.push(subscription)
@@ -76,9 +80,10 @@ const getServer = () => {
 // Start server
 app.use(bodyParser.json());
 app.use(express.static('public'));
-getServer().listen(SERVER_PORT, () => console.log(`Server started on port ${SERVER_PORT}`))
-
-initwebPush()
+getServer().listen(SERVER_PORT, async () => {
+    console.log(`Server started on port ${SERVER_PORT}`)
+    await initWebPush()
+})
 
 
 // API ROUTES
@@ -88,8 +93,10 @@ app.get('/', (req: Request, res: Response) => {
     res.status(200).sendFile('index.html');
 })
 
-app.get('/vapid_public', (req: Request, res: Response) => {
-    const vapidKeys = getDb().data.vapidKeys
+app.get('/vapid_public', async (req: Request, res: Response) => {
+    const db = await getDb()
+    const vapidKeys = db.data.vapidKeys
+
     if (!vapidKeys.publicKey) return res.status(500).json({ message: 'No public key found' })
     res.status(200).json({vapid_public_key: vapidKeys.publicKey})
 })
@@ -111,7 +118,7 @@ app.post('/subscribe', async (req: any, res: any) => {
 
 
 // Send a push notification
-app.post('/sendNotification', (req: Request, res: Response) => {
+app.post('/sendNotification', async (req: Request, res: Response) => {
     try {
         const notificationPayload: { notification: Notification } = {
             notification: {
@@ -121,7 +128,9 @@ app.post('/sendNotification', (req: Request, res: Response) => {
             },
         };
 
-        const subscriptions = getDb().data.subscriptions
+        const db = await getDb()
+        const subscriptions = db.data.subscriptions
+
         subscriptions.forEach(subscription => {
             webPush.sendNotification(
                 subscription,
