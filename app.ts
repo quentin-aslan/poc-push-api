@@ -116,17 +116,13 @@ app.post('/subscribe', async (req: any, res: any) => {
     }
 });
 
-
 // Send a push notification
 app.post('/sendNotification', async (req: Request, res: Response) => {
     try {
-        const notificationPayload: { notification: Notification } = {
-            notification: {
-                title: 'New Notification',
-                body: 'This is the body of the notification',
-                icon: 'icon.png',
-            },
-        };
+        // get notification from params
+        const notificationPayload: Notification = req.body;
+
+        if(!notificationPayload.title || !notificationPayload.body) return res.status(400).json({ message: 'Notification must have a title and a body' })
 
         const db = await getDb()
         const subscriptions = db.data.subscriptions
@@ -134,7 +130,7 @@ app.post('/sendNotification', async (req: Request, res: Response) => {
         subscriptions.forEach(subscription => {
             webPush.sendNotification(
                 subscription,
-                JSON.stringify(notificationPayload)
+                JSON.stringify({ notification: notificationPayload })
             );
         })
 

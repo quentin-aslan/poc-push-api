@@ -7,9 +7,9 @@
     "node": ">=16"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.ts",
-    "start:tsc": "tsc && node dist/app.js"
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "start:tsc": "npm run build && npm run start"
   },
   "repository": {
     "type": "git",
