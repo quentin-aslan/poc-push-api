@@ -124,12 +124,16 @@ app.post('/sendNotification', async (req: Request, res: Response) => {
         const db = await getDb()
         const subscriptions = db.data.subscriptions
 
-        subscriptions.forEach(subscription => {
-            webPush.sendNotification(
-                subscription,
-                JSON.stringify({ notification: notificationPayload })
-            );
-        })
+        for (const subscription of subscriptions) {
+            try {
+                await webPush.sendNotification(
+                    subscription,
+                    JSON.stringify({ notification: notificationPayload })
+                );
+            } catch (e) {
+                console.log("Error when sending notification to " + subscription.endpoint)
+            }
+        }
 
         res.status(201).json({ message: 'Notification sent successfully.' })
     } catch (e) {

@@ -88,19 +88,20 @@ const sendNotification = async () => {
             return alert('Please enter a title and content for the notification.');
         }
 
-        const payload = { title, body }
+        const payload = { title: title.value, body: body.value }
 
-        await fetch('/sendNotification', {
+        const response = await fetch('/sendNotification', {
             method: 'POST',
             headers: { 'Content-type': 'application/json' },
             body: JSON.stringify(payload),
         })
-
-        alert('Notification sent!')
+        if (response.status !== 201) return alert('Notification wasn\'t sent')
+        const data = await response.json()
+        alert(data.message)
 
         title.value = ''
         body.value = ''
     } catch (e) {
-        console.error(e)
+        alert(e)
     }
 }
