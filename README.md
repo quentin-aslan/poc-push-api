@@ -1,31 +1,69 @@
 # Push API Notification POC 🚀
 
-Hello there! 🎉
+This project is a backend developed in Node.js with Express. It implements a push notification server using Web Push. The data is stored locally using the LowDB JSON database.
 
-Welcome to my Push API Notification POC. This repository serves as a proof-of-concept (POC) to showcase the implementation of push notifications in a web platform using the Push API. The goal is to demonstrate the immense power of push notifications for providing real-time updates and interaction with users! 📬💡
+## Installation
 
-What will you discover in this repository? 🧐
+1. Make sure you have Node.js installed on your machine.
+2. Clone this source code repository.
+3. Run the following command to install dependencies:
 
-1. **Practical examples**: This isn't just about theory, but hands-on, real-world examples to help you grasp the concept better. 💼
-2. **Easy to understand code**: I've ensured to keep the code simple and comprehensible, making it beginner-friendly! 👌💻
-3. **Comprehensive documentation**: I believe that understanding is the first step to successful implementation. Hence, I've prioritized clear and extensive documentation. 📘🔦
-
-So, buckle up and prepare to delve into the exciting world of push notifications. It's going to be a fun ride! 🎢💥
+```bash
+npm install
+```
 
 
-Step 1: Get User Permission
-Before you can send notifications to users, you need to get their permission. This is generally done using the Notification.requestPermission() method.
+## Server Startup
 
-Step 2: Register a Service Worker
-A service worker is a script that runs in the web browser and manages caching for an application. This script runs separately from the main browser thread, intercepting network requests, caching or retrieving resources, and delivering push messages.
+To start the server, use the following command:
 
-Step 3: Subscribe the User
-After registering your service worker, you need to subscribe the user to your push service. The subscription will include all information the push service needs to send a push message to the user.
+```bash
+npm start
+```
 
-Step 4: Send a Push Message
-You can send a push message from your server to the user's device via the push service. This involves constructing the correct HTTP request, with the right headers and body content, and making a POST request to the push service.
 
-Step 5: Receive and Display the Notification
-Once the service worker receives a push message, it needs to display the message to the user. It can do this even if the application isn't currently active.
+The server will launch on the port specified in the `PORT` environment variable or on port 4000 by default. 🚀
 
-For a detailed understanding and implementation of each step, I recommend referring to the Service Worker API and Push API documentation on MDN (Mozilla Developer Network). The APIs involved are complex and have various parameters to consider, so a thorough understanding of the documentation is essential.
+## API Routes
+
+- `GET /`: This route returns the HTML homepage.
+- `GET /vapidPublic`: This route returns the VAPID public key required for subscribing to push notifications.
+- `POST /subscribe`: This route allows registering a new subscription for push notifications. It expects a JSON object containing the subscription's endpoint and keys.
+- `POST /sendNotification`: This route sends a push notification to all registered subscriptions. It expects a JSON object containing the title and body of the notification.
+
+## Configuration
+
+When the server starts, it automatically generates a VAPID key pair if they don't already exist. The keys are stored in the LowDB JSON database.
+
+The database configuration is located in the `db.json` file. If the file doesn't exist, it will be created automatically when the server starts. 🔑
+
+## Database
+
+This project uses LowDB, a lightweight JSON database. The data is stored in the `db.json` file. If the file doesn't exist, it will be created automatically on the first server startup. 💾
+
+## Frontend
+
+The associated frontend for this backend is a simple HTML page with a button to enable push notifications and a form to send notifications to all subscribers.
+
+### Service Worker Installation
+
+When the page is loaded, the `main.js` JavaScript file takes care of installing the service worker and registering the user for push notifications.
+
+### Service Worker
+
+The `service-worker.js` file is responsible for receiving and displaying the push notifications sent by the server. 📲
+
+## Notes
+
+- Make sure you have the SSL certificates (`fullchain.pem` and `privkey.pem`) in the "certs" directory to start an HTTPS server. If the certificates are not present, the server will start in HTTP mode.
+
+- On iOS, in order to receive push notifications, the user needs to add the application to their home screen. Otherwise, push notifications will not be displayed. Make sure to inform users about this requirement. ℹ️
+
+Remember to update the email addresses and any other necessary configurations for sending push notifications in the backend and frontend files.
+
+That's it! You can now use this backend to manage push notifications in your application. 🎉
+
+Feel free to let me know if you have any further questions! 🙌
+
+
+

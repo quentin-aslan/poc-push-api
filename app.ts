@@ -88,12 +88,9 @@ getServer().listen(SERVER_PORT, async () => {
 
 // API ROUTES
 
+app.get('/', (req: Request, res: Response) => res.status(200).sendFile('index.html'))
 
-app.get('/', (req: Request, res: Response) => {
-    res.status(200).sendFile('index.html');
-})
-
-app.get('/vapid_public', async (req: Request, res: Response) => {
+app.get('/vapidPublic', async (req: Request, res: Response) => {
     const db = await getDb()
     const vapidKeys = db.data.vapidKeys
 

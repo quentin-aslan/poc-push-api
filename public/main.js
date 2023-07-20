@@ -3,9 +3,11 @@ document.getElementById('subscribe').onclick = () => {
         checkBrowserCompatibility();
         askNotificationPermission().then(subscribeUserToPush)
     } catch (e) {
-        console.error('Unable to register service worker', e);
+        console.log(e)
     }
 }
+
+document.getElementById('notificationSubmit').onclick = () => sendNotification()
 
 const serviceWorkerRegistration = async () => {
     return new Promise((resolve) => {
@@ -43,8 +45,6 @@ const subscribeUserToPush = async () => {
 
         const pushSubscription = await serviceWorker.pushManager.subscribe(subscribeOptions)
 
-        console.log('Received PushSubscription: ', JSON.stringify(pushSubscription));
-        // Send the subscription details to the server using the Fetch API
         await fetch('/subscribe', {
             method: 'post',
             headers: { 'Content-type': 'application/json' },
@@ -74,7 +74,33 @@ const urlBase64ToUint8Array = (base64String) => {
 }
 
 const getVapidPublicKey = async () => {
-    const response = await fetch('/vapid_public')
+    const response = await fetch('/vapidPublic')
     const data = await response.json()
     return data.vapid_public_key
+}
+
+const sendNotification = async () => {
+    try {
+        const title = document.getElementById('notificationTitle');
+        const body = document.getElementById('notificationBody');
+
+        if(title.value === '' || body.value === '') {
+            return alert('Please enter a title and content for the notification.');
+        }
+
+        const payload = { title, body }
+
+        await fetch('/sendNotification', {
+            method: 'POST',
+            headers: { 'Content-type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+
+        alert('Notification sent!')
+
+        title.value = ''
+        body.value = ''
+    } catch (e) {
+        console.error(e)
+    }
 }

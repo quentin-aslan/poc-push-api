@@ -1,11 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Push Notification POC</title>
-    <script src="/main.js" async=""></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POC-PUSH-API</title>
     <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<button id="subscribe">Enable Push Notifications</button>
+
+<div class="container">
+    <div id="header">
+        <button id="subscribe" class="button">Subscribe to Push Notifications</button>
+    </div>
+
+    <div class="card">
+        <h3>About this Proof of Concept</h3>
+        <p>
+            This is a proof-of-concept application for managing push notifications using a Progressive Web App (PWA).
+            It demonstrates the implementation of push notification features, allowing users to subscribe to notifications
+            and send notifications to all subscribers.
+        </p>
+    </div>
+
+    <div>
+        <div id="notificationForm">
+            <div>
+                <label for="notificationTitle">Title:</label>
+                <input type="text" id="notificationTitle" required>
+            </div>
+
+            <div>
+                <label for="notificationBody">Content:</label>
+                <input type="text" id="notificationBody" required>
+            </div>
+
+            <button id="notificationSubmit" class="button" type="submit">Send notification to All Subscribers</button>
+        </div>
+    </div>
+</div>
+
+<script src="/main.js"></script>
 </body>
 </html>
