@@ -1,69 +1,26 @@
 // Set-up express server
-import fs from 'fs'
+import cors from 'cors'
 import https from 'https'
 import http from 'http'
 import webPush from 'web-push'
 import bodyParser from 'body-parser'
-import { Database, VapidKeys, Subscription, Notification } from "./types";
-import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
+import {Notification, PillStatus, User} from "./types.js";
 import express, { Request, Response } from "express";
+import {getCertificate, getDb, initWebPush, isToday} from './utils.js';
+import {initCheckPillsStatus} from "./pills-reminder.js";
 const app = express();
 const SERVER_PORT = process.env.PORT || 4000;
-let CURRENT_DB: Low<Database> | undefined = undefined
 
 // Functions
-const getDb = async () => {
-    if (CURRENT_DB) return CURRENT_DB
-    const file = './db.json'
-    if (!fs.existsSync(file)) fs.writeFileSync(file, '')
-
-    const defaultData = { subscriptions: [], vapidKeys: { public: undefined, privateKey: undefined } }
-    const adapter = new JSONFile<Database>(file)
-
-    const db = new Low<Database>(adapter, defaultData)
-    await db.read()
-    CURRENT_DB = db
-    return db
-}
-const getVapidKeys = async (): Promise<VapidKeys> => {
-    try {
-        const db = await getDb()
-
-        if (db.data.vapidKeys.publicKey && db.data.vapidKeys.privateKey) return db.data.vapidKeys
-        db.data.vapidKeys = webPush.generateVAPIDKeys()
-        await db.write()
-        return db.data.vapidKeys
-    } catch (e) {
-        console.error(e)
-        return { publicKey: undefined, privateKey: undefined }
-    }
-}
-const initWebPush = async () => {
-    const vapidKeys = await getVapidKeys()
-    if (!vapidKeys.publicKey || !vapidKeys.privateKey) throw new Error('No vapid keys found')
-    webPush.setVapidDetails(
-        'mailto:quentin.aslan@outlook.com',
-        vapidKeys.publicKey,
-        vapidKeys.privateKey
-    )
-}
-const saveSubscriptionInDb = async (subscription: Subscription) => {
+const saveUserInDb = async (userData: User) => {
     const db = await getDb()
-    const user = db.data.subscriptions.find(user => user.endpoint === subscription.endpoint)
-    if (!user) {
-        db.data.subscriptions.push(subscription)
-        await db.write()
-    }
-}
-const getCertificate = () => {
-    const fullchainPath = './certs/fullchain.pem'
-    const privkeyPath = './certs/privkey.pem'
-    if (!fs.existsSync(fullchainPath) || !fs.existsSync(privkeyPath)) return false
+    const userDb = db.data.users.find(user => user.name === userData.name)
 
-    return {
-        cert: fs.readFileSync('./certs/fullchain.pem'),
-        key: fs.readFileSync('./certs/privkey.pem')
+    if (!userDb) {
+        if(!userData.pillsHistory) userData.pillsHistory = []
+
+        db.data.users.push(userData)
+        await db.write()
     }
 }
 const getServer = () => {
@@ -78,13 +35,14 @@ const getServer = () => {
 }
 
 // Start server
+app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 getServer().listen(SERVER_PORT, async () => {
     console.log(`Server started on port ${SERVER_PORT}`)
     await initWebPush()
+    await initCheckPillsStatus()
 })
-
 
 // API ROUTES
 
@@ -100,16 +58,17 @@ app.get('/vapidPublic', async (req: Request, res: Response) => {
 
 app.post('/subscribe', async (req: any, res: any) => {
     try {
-        const subscription = req.body;
+        const data: User = req.body;
+
         // Check if subscription have all keys
-        if (!subscription.endpoint || !subscription.keys) {
-            res.status(400).json({ message: 'Subscription must have an endpoint and keys' });
+        if (!data.name || !data.subscription || !data.subscription.endpoint || !data.subscription.keys) {
+            return res.status(400).json({ message: 'Username, endpoint and keys properties are mandatory' });
         }
 
-        await saveSubscriptionInDb(subscription)
-        res.status(201).json({ message: 'Subscription added successfully.' });
+        await saveUserInDb(data)
+        return res.status(201).json({ message: 'Subscription added successfully.' });
     } catch (e) {
-        res.status(500).json({ message: 'Error when saving the subscription.' });
+        return res.status(500).json({ message: 'Error when saving the subscription.' });
     }
 });
 
@@ -122,22 +81,63 @@ app.post('/sendNotification', async (req: Request, res: Response) => {
         if(!notificationPayload.title || !notificationPayload.body) return res.status(400).json({ message: 'Notification must have a title and a body' })
 
         const db = await getDb()
-        const subscriptions = db.data.subscriptions
+        const users = db.data.users
 
-        for (const subscription of subscriptions) {
+        for (const user of users) {
             try {
                 await webPush.sendNotification(
-                    subscription,
+                    user.subscription,
                     JSON.stringify({ notification: notificationPayload })
                 );
             } catch (e) {
-                console.log("Error when sending notification to " + subscription.endpoint)
+                console.log("Error when sending notification to " + user.name)
             }
         }
 
-        res.status(201).json({ message: 'Notification sent successfully.' })
+        res.status(201).json({ message: 'Notifications sent successfully.' })
     } catch (e) {
         console.error(e)
         res.status(500).json({ message: 'Error when sending the notification.' });
+    }
+})
+
+app.post('/pillStatus', async (req: any, res: any) => {
+    try {
+        const pillStatus: PillStatus = req.body;
+        // Check if subscription have all keys
+        if (!pillStatus.username || !pillStatus.taken) {
+            res.status(400).json({ message: 'Username and taken properties missed' });
+        }
+
+        const db = await getDb()
+
+        // Found the user
+        const user = db.data.users.find(user => user.name === pillStatus.username)
+        if (!user) return res.status(400).json({ message: 'Wrong username !' });
+        const pillHistoryIndex = user?.pillsHistory.findIndex(pillDatas => isToday(pillDatas.date))
+
+        if(!pillHistoryIndex) user.pillsHistory.push({ date: new Date(), taken: pillStatus.taken, notifications: 0 })
+        user.pillsHistory[pillHistoryIndex].taken = pillStatus.taken
+
+        res.status(200).json({ message: 'Pill status updated.' });
+    } catch (e) {
+        res.status(500).json({ message: 'Error when saving the pill status.' });
+    }
+});
+
+app.get('/getUser', async (req: any, res: any) => {
+    try {
+        const username = req.query.username
+        if (!username) return res.status(400).json({ message: 'Username is required' });
+
+        const db = await getDb()
+        const user = db.data.users.find(user => user.name === username)
+
+
+        if (!user) return res.status(400).json({ message: 'Wrong username !' });
+
+        res.status(200).json(user);
+    } catch (e) {
+        res.status(500).json({ message: 'Error when getting the pills history.' });
     }
 })
