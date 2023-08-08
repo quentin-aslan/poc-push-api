@@ -1,10 +1,11 @@
-import {Notification} from "./types";
+import {Notification, PillStatus, User} from "./types";
 import webPush from "web-push";
 import {getDb, isToday} from "./utils.js";
 
 
 const INTERVAL_CHECK_PILLS_STATUS = 3000 // 5 mins
 const NOTIFICATION_MAX = 10
+
 const checkPillStatus = async () => {
     console.log('Checking pill status ...', new Date().toString())
     const db = await getDb()
@@ -15,28 +16,31 @@ const checkPillStatus = async () => {
 
         // If no pill history for today, create one
         if (pillHistoryIndex === -1) {
+            console.log('There is no pill history for today, creating one ...', user.name)
             user.pillsHistory.push({date: new Date(), taken: false, notifications: 0})
             pillHistoryIndex = 0
         }
 
         // If pill not taken and less than NOTIFICATION_MAX, send one
-        if (!user.pillsHistory[pillHistoryIndex].taken && user.pillsHistory[pillHistoryIndex].notifications < NOTIFICATION_MAX) {
-            const notificationPayload: Notification = {
-                title: 'Pill reminder',
-                body: 'Did you take your pill today ?'
-            }
+        if (user.pillsHistory[pillHistoryIndex].taken || user.pillsHistory[pillHistoryIndex].notifications === NOTIFICATION_MAX) {
+            return console.log('Pill already taken or max notifications reached', user.name)
+        }
 
-            try {
-                console.log("Sending notification to " + user.name)
-                await webPush.sendNotification(
-                    user.subscription,
-                    JSON.stringify({ notification: notificationPayload })
-                );
+        const notificationPayload: Notification = {
+            title: 'Pill reminder',
+            body: 'Did you take your pill today ?'
+        }
 
-                // user.pillsHistory[pillHistoryIndex].notifications++
-            } catch (e) {
-                return console.log("Error when sending notification to " + user.name)
-            }
+        try {
+            console.log("Sending notification to " + user.name)
+            await webPush.sendNotification(
+                user.subscription,
+                JSON.stringify({ notification: notificationPayload })
+            );
+
+            user.pillsHistory[pillHistoryIndex].notifications++
+        } catch (e) {
+            return console.log("Error when sending notification to " + user.name)
         }
     }
     await db.write()
@@ -45,5 +49,26 @@ const checkPillStatus = async () => {
 export const initCheckPillsStatus = () => {
     console.log('Init check pill status interval | every : (ms)', INTERVAL_CHECK_PILLS_STATUS)
     setInterval(checkPillStatus, INTERVAL_CHECK_PILLS_STATUS)
+}
+
+export const updatePillStatus = async (datas: PillStatus): Promise<User> => {
+    const db = await getDb()
+
+    // Found the user
+    const user = db.data.users.find(user => user.name === datas.username)
+    if (!user) throw new Error('User not found')
+    let pillHistoryIndex = user?.pillsHistory.findIndex(pillDatas => isToday(new Date(pillDatas.date)))
+
+
+    if(pillHistoryIndex === -1) {
+        console.log('There is no pill history for today, creating one ...', user.name)
+        user.pillsHistory.push({date: new Date(), taken: datas.taken, notifications: 0})
+        pillHistoryIndex = 0
+    }
+
+    user.pillsHistory[pillHistoryIndex].taken = datas.taken
+    await db.write()
+
+    return user
 }
 

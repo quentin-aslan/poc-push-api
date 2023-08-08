@@ -6,8 +6,8 @@ import webPush from 'web-push'
 import bodyParser from 'body-parser'
 import {Notification, PillStatus, User} from "./types.js";
 import express, { Request, Response } from "express";
-import {getCertificate, getDb, initWebPush, isToday} from './utils.js';
-import {initCheckPillsStatus} from "./pills-reminder.js";
+import {getCertificate, getDb, initWebPush} from './utils.js';
+import {initCheckPillsStatus, updatePillStatus} from "./pills-reminder.js";
 const app = express();
 const SERVER_PORT = process.env.PORT || 4000;
 
@@ -53,7 +53,7 @@ app.get('/vapidPublic', async (req: Request, res: Response) => {
     const vapidKeys = db.data.vapidKeys
 
     if (!vapidKeys.publicKey) return res.status(500).json({ message: 'No public key found' })
-    res.status(200).json({vapid_public_key: vapidKeys.publicKey})
+    return res.status(200).json({vapid_public_key: vapidKeys.publicKey})
 })
 
 app.post('/subscribe', async (req: any, res: any) => {
@@ -94,10 +94,10 @@ app.post('/sendNotification', async (req: Request, res: Response) => {
             }
         }
 
-        res.status(201).json({ message: 'Notifications sent successfully.' })
+        return res.status(201).json({ message: 'Notifications sent successfully.' })
     } catch (e) {
         console.error(e)
-        res.status(500).json({ message: 'Error when sending the notification.' });
+        return res.status(500).json({ message: 'Error when sending the notification.' });
     }
 })
 
@@ -106,22 +106,15 @@ app.post('/pillStatus', async (req: any, res: any) => {
         const pillStatus: PillStatus = req.body;
         // Check if subscription have all keys
         if (!pillStatus.username || !pillStatus.taken) {
-            res.status(400).json({ message: 'Username and taken properties missed' });
+            return res.status(400).json({ message: 'Username or taken properties missed' });
         }
 
-        const db = await getDb()
+        const user = await updatePillStatus(pillStatus)
 
-        // Found the user
-        const user = db.data.users.find(user => user.name === pillStatus.username)
-        if (!user) return res.status(400).json({ message: 'Wrong username !' });
-        const pillHistoryIndex = user?.pillsHistory.findIndex(pillDatas => isToday(pillDatas.date))
-
-        if(!pillHistoryIndex) user.pillsHistory.push({ date: new Date(), taken: pillStatus.taken, notifications: 0 })
-        user.pillsHistory[pillHistoryIndex].taken = pillStatus.taken
-
-        res.status(200).json({ message: 'Pill status updated.' });
+        return res.status(200).json(user);
     } catch (e) {
-        res.status(500).json({ message: 'Error when saving the pill status.' });
+        console.log(e)
+        return res.status(500).json({ message: 'Error when saving the pill status.' });
     }
 });
 
@@ -136,8 +129,8 @@ app.get('/getUser', async (req: any, res: any) => {
 
         if (!user) return res.status(400).json({ message: 'Wrong username !' });
 
-        res.status(200).json(user);
+        return res.status(200).json(user);
     } catch (e) {
-        res.status(500).json({ message: 'Error when getting the pills history.' });
+        return res.status(500).json({ message: 'Error when getting the pills history.' });
     }
 })
