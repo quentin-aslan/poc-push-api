@@ -3,7 +3,7 @@ import webPush from "web-push";
 import {getDb, isToday} from "./utils.js";
 
 
-const INTERVAL_CHECK_PILLS_STATUS = 3000 // 5 mins
+const INTERVAL_CHECK_PILLS_STATUS = 300000 // 5 mins
 const NOTIFICATION_MAX = 10
 
 const checkPillStatus = async () => {
@@ -18,7 +18,7 @@ const checkPillStatus = async () => {
         if (pillHistoryIndex === -1) {
             console.log('There is no pill history for today, creating one ...', user.name)
             user.pillsHistory.push({date: new Date(), taken: false, notifications: 0})
-            pillHistoryIndex = 0
+            pillHistoryIndex = user.pillsHistory.length -1
         }
 
         // If pill not taken and less than NOTIFICATION_MAX, send one
@@ -48,6 +48,7 @@ const checkPillStatus = async () => {
 
 export const initCheckPillsStatus = () => {
     console.log('Init check pill status interval | every : (ms)', INTERVAL_CHECK_PILLS_STATUS)
+    checkPillStatus()
     setInterval(checkPillStatus, INTERVAL_CHECK_PILLS_STATUS)
 }
 
@@ -63,7 +64,7 @@ export const updatePillStatus = async (datas: PillStatus): Promise<User> => {
     if(pillHistoryIndex === -1) {
         console.log('There is no pill history for today, creating one ...', user.name)
         user.pillsHistory.push({date: new Date(), taken: datas.taken, notifications: 0})
-        pillHistoryIndex = 0
+        pillHistoryIndex = user.pillsHistory.length -1
     }
 
     user.pillsHistory[pillHistoryIndex].taken = datas.taken
