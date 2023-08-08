@@ -6,6 +6,15 @@ import {getDb, isToday} from "./utils.js";
 const INTERVAL_CHECK_PILLS_STATUS = 300000 // 5 mins
 const NOTIFICATION_MAX = 10
 
+const DEFAULT_REMINDER_TIME = '9:00'
+
+const isReminderTimePassed = (reminderTime: string) => {
+    const [hour, min] = reminderTime.split(':')
+    const now = new Date()
+    const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hour), Number(min))
+    return now > reminderDate
+}
+
 const checkPillStatus = async () => {
     console.log('Checking pill status ...', new Date().toString())
     const db = await getDb()
@@ -13,7 +22,6 @@ const checkPillStatus = async () => {
 
     for (const user of users) {
         let pillHistoryIndex = user?.pillsHistory.findIndex(pillDatas => isToday(new Date(pillDatas.date)))
-
         // If no pill history for today, create one
         if (pillHistoryIndex === -1) {
             console.log('There is no pill history for today, creating one ...', user.name)
@@ -22,8 +30,11 @@ const checkPillStatus = async () => {
         }
 
         // If pill not taken and less than NOTIFICATION_MAX, send one
-        if (user.pillsHistory[pillHistoryIndex].taken || user.pillsHistory[pillHistoryIndex].notifications === NOTIFICATION_MAX) {
-            return console.log('Pill already taken or max notifications reached', user.name)
+        if (user.pillsHistory[pillHistoryIndex].taken ||
+            user.pillsHistory[pillHistoryIndex].notifications === NOTIFICATION_MAX ||
+            !isReminderTimePassed(DEFAULT_REMINDER_TIME)) {
+            console.log('Pill already taken, max notifications reached or reminder time not passed', user.name)
+            continue
         }
 
         const notificationPayload: Notification = {
@@ -40,7 +51,7 @@ const checkPillStatus = async () => {
 
             user.pillsHistory[pillHistoryIndex].notifications++
         } catch (e) {
-            return console.log("Error when sending notification to " + user.name)
+            console.log("Error when sending notification to " + user.name)
         }
     }
     await db.write()
