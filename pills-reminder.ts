@@ -6,7 +6,7 @@ import {getDb, isToday} from "./utils.js";
 const INTERVAL_CHECK_PILLS_STATUS = 300000 // 5 mins
 const NOTIFICATION_MAX = 10
 
-const DEFAULT_REMINDER_TIME = '9:00'
+const DEFAULT_REMINDER_TIME = '15:00'
 
 const isReminderTimePassed = (reminderTime: string) => {
     const [hour, min] = reminderTime.split(':')
