@@ -9,7 +9,7 @@ import express, { Request, Response } from "express";
 import {getCertificate, getDb, initWebPush} from './utils.js';
 import {initCheckPillsStatus, updatePillStatus} from "./pills-reminder.js";
 const app = express();
-const SERVER_PORT = process.env.PORT || 4000;
+const SERVER_PORT = process.env.PORT || 4051;
 
 // Functions
 const saveUserInDb = async (userData: User) => {
