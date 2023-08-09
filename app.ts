@@ -48,7 +48,7 @@ getServer().listen(SERVER_PORT, async () => {
 
 app.get('/', (req: Request, res: Response) => res.status(200).sendFile('index.html'))
 
-app.get('/vapidPublic', async (req: Request, res: Response) => {
+app.get('/api/vapidPublic', async (req: Request, res: Response) => {
     const db = await getDb()
     const vapidKeys = db.data.vapidKeys
 
@@ -56,7 +56,7 @@ app.get('/vapidPublic', async (req: Request, res: Response) => {
     return res.status(200).json({vapid_public_key: vapidKeys.publicKey})
 })
 
-app.post('/subscribe', async (req: any, res: any) => {
+app.post('/api/subscribe', async (req: any, res: any) => {
     try {
         const data: User = req.body;
 
@@ -73,7 +73,7 @@ app.post('/subscribe', async (req: any, res: any) => {
 });
 
 // Send a push notification
-app.post('/sendNotification', async (req: Request, res: Response) => {
+app.post('/api/sendNotification', async (req: Request, res: Response) => {
     try {
         // get notification from params
         const notificationPayload: Notification = req.body;
@@ -101,7 +101,7 @@ app.post('/sendNotification', async (req: Request, res: Response) => {
     }
 })
 
-app.post('/pillStatus', async (req: any, res: any) => {
+app.post('/api/pillStatus', async (req: any, res: any) => {
     try {
         const pillStatus: PillStatus = req.body;
         // Check if subscription have all keys
@@ -118,7 +118,7 @@ app.post('/pillStatus', async (req: any, res: any) => {
     }
 });
 
-app.get('/getUser', async (req: any, res: any) => {
+app.get('/api/getUser', async (req: any, res: any) => {
     try {
         const username = req.query.username
         if (!username) return res.status(400).json({ message: 'Username is required' });

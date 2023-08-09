@@ -45,7 +45,7 @@ const subscribeUserToPush = async () => {
 
         const pushSubscription = await serviceWorker.pushManager.subscribe(subscribeOptions)
 
-        await fetch('/subscribe', {
+        await fetch('/api/subscribe', {
             method: 'post',
             headers: { 'Content-type': 'application/json' },
             body: JSON.stringify(pushSubscription),
@@ -74,7 +74,7 @@ const urlBase64ToUint8Array = (base64String) => {
 }
 
 const getVapidPublicKey = async () => {
-    const response = await fetch('/vapidPublic')
+    const response = await fetch('/api/vapidPublic')
     const data = await response.json()
     return data.vapid_public_key
 }
@@ -90,7 +90,7 @@ const sendNotification = async () => {
 
         const payload = { title: title.value, body: body.value }
 
-        const response = await fetch('/sendNotification', {
+        const response = await fetch('/api/sendNotification', {
             method: 'POST',
             headers: { 'Content-type': 'application/json' },
             body: JSON.stringify(payload),
